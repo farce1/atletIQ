@@ -52,6 +52,10 @@ class Settings(BaseSettings):
 
     # Integrations
     # ------------>
+    
+    # Telegram Bot Configuration
+    TELEGRAM_BOT_TOKEN: SecretStr | None = None
+    TELEGRAM_BOT_API_URL: str = "https://api.telegram.org/bot"
 
     # Claude Agent Configuration
     CLAUDE_AGENT_SYSTEM_PROMPT: str = (
