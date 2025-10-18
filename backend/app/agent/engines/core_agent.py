@@ -13,13 +13,18 @@ from claude_agent_sdk import (
     CLINotFoundError,
     ProcessError,
     CLIJSONDecodeError,
-    McpServerConfig,
 )
 from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.crud.conversation import get_conversation_by_session_id
+from app.crud.message import get_messages_by_conversation_id
 
-from app.agent.prompts.agent_prompts import TEXT_QUERY_EXTRACT_PROMPT
+from app.agent.prompts.agent_prompts import (
+    TEXT_QUERY_EXTRACT_PROMPT,
+    TEXT_TRAINING_FITNESS_INDEX_PROMPT,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -30,12 +35,12 @@ def create_mcp_http_server_config(
 ) -> Dict[str, Any]:
     """
     Create an MCP HTTP server configuration.
-    
+
     Args:
         name: Name of the MCP server
         url: URL of the MCP server
         headers: Optional headers for the HTTP request
-        
+
     Returns:
         Dict[str, Any]: Configuration for the MCP HTTP server
     """
@@ -73,6 +78,7 @@ class ClaudeAgent:
         cwd: Optional[str] = None,
         max_conversation_length: int = 50,
         mcp_servers: Optional[Dict[str, Dict[str, Any]]] = None,
+        db_session: Optional[Session] = None,
     ):
         """
         Initialize the Claude Agent.
@@ -84,6 +90,7 @@ class ClaudeAgent:
             cwd: Working directory for the agent
             max_conversation_length: Maximum number of messages to keep in context
             mcp_servers: Dictionary of MCP server configurations
+            db_session: Database session for loading chat history
         """
         self.system_prompt = system_prompt or self._get_default_system_prompt()
         self.allowed_tools = allowed_tools or ["Read", "Write", "Bash", "WebSearch"]
@@ -91,6 +98,7 @@ class ClaudeAgent:
         self.cwd = cwd
         self.max_conversation_length = max_conversation_length
         self.mcp_servers = mcp_servers or {}
+        self.db_session = db_session
 
         # Conversation contexts by session ID
         self._conversations: Dict[UUID, ConversationContext] = {}
@@ -118,6 +126,40 @@ Always maintain a professional and friendly tone.
         if session_id not in self._conversations:
             self._conversations[session_id] = ConversationContext(session_id=session_id)
         return self._conversations[session_id]
+
+    def _load_chat_history_from_db(self, session_id: UUID) -> None:
+        """Load existing chat history from database for a session."""
+        if not self.db_session:
+            return
+
+        try:
+            # Get conversation for this session
+            conversation = get_conversation_by_session_id(
+                session=self.db_session, session_id=session_id
+            )
+
+            if not conversation:
+                return
+
+            # Get all messages for this conversation
+            messages = get_messages_by_conversation_id(
+                session=self.db_session, conversation_id=conversation.id
+            )
+
+            # Load messages into conversation context
+            context = self._get_conversation_context(session_id)
+            context.conversation_history.clear()  # Clear any existing in-memory history
+
+            for message in messages:
+                self._update_conversation_history(
+                    session_id=session_id,
+                    role=message.role.value,
+                    content=message.content,
+                    metadata={"timestamp": message.timestamp.isoformat()},
+                )
+
+        except Exception as e:
+            logger.warning(f"Failed to load chat history for session {session_id}: {e}")
 
     def _update_conversation_history(
         self,
@@ -176,6 +218,9 @@ Always maintain a professional and friendly tone.
             Claude's response as string or async iterator for streaming
         """
         try:
+            # Load existing chat history from database
+            self._load_chat_history_from_db(session_id)
+
             # Update conversation history
             self._update_conversation_history(session_id, "user", message)
 
@@ -343,6 +388,7 @@ class ClaudeAgentError(Exception):
 # Global agent instances
 _global_agent: Optional[ClaudeAgent] = None
 _global_extractor_agent: Optional[ClaudeAgent] = None
+_global_training_fitness_agent: Optional[ClaudeAgent] = None
 
 
 def get_claude_agent() -> ClaudeAgent:
@@ -351,9 +397,7 @@ def get_claude_agent() -> ClaudeAgent:
     if _global_agent is None:
         _global_agent = ClaudeAgent(
             system_prompt=settings.CLAUDE_AGENT_SYSTEM_PROMPT,
-            allowed_tools=[
-                "mcp__healthion_mcp_server__fetch_workouts"
-            ],
+            allowed_tools=["mcp__healthion_mcp_server__fetch_workouts"],
             permission_mode=settings.CLAUDE_AGENT_PERMISSION_MODE,
             cwd=settings.CLAUDE_AGENT_WORKING_DIR,
             max_conversation_length=settings.CLAUDE_AGENT_MAX_CONVERSATION_LENGTH,
@@ -377,27 +421,17 @@ def get_extractor_claude_agent() -> ClaudeAgent:
     return _global_extractor_agent
 
 
-def create_general_agent() -> ClaudeAgent:
-    """Create a new general-purpose Claude agent instance."""
-    return ClaudeAgent(
-        system_prompt="You are a helpful AI assistant specialized in general queries and tasks.",
-        allowed_tools=["Read", "Write", "Bash", "WebSearch"],
-        permission_mode="acceptEdits",
-        mcp_servers={},
-    )
-
-
-def create_specialized_agent(
-    specialization: str, custom_tools: Optional[List[str]] = None
-) -> ClaudeAgent:
-    """Create a specialized Claude agent instance."""
-    system_prompt = f"You are a specialized AI assistant focused on {specialization}."
-
-    tools = custom_tools or ["Read", "Write", "Bash", "WebSearch"]
-
-    return ClaudeAgent(
-        system_prompt=system_prompt,
-        allowed_tools=tools,
-        permission_mode="acceptEdits",
-        mcp_servers={},
-    )
+def get_training_fitness_index_claude_agent(user_bio_profile: str) -> ClaudeAgent:
+    """Get the global training fitness index Claude agent instance."""
+    global _global_training_fitness_agent
+    if _global_training_fitness_agent is None:
+        _global_training_fitness_agent = ClaudeAgent(
+            system_prompt=TEXT_TRAINING_FITNESS_INDEX_PROMPT.format(
+                user_bio_profile=user_bio_profile
+            ),
+            allowed_tools=[],
+            permission_mode="acceptEdits",
+            cwd=None,
+            max_conversation_length=50,
+        )
+    return _global_training_fitness_agent
