@@ -207,6 +207,8 @@ class ChatService:
                 )
                 # Use extractor agent to extract user profile data from the message
                 extractor_claude_agent = get_extractor_claude_agent()
+                # Set the database session for loading chat history
+                extractor_claude_agent.db_session = self._db
 
                 # Process the message with the extractor agent
                 extraction_response = await extractor_claude_agent.process_message(
@@ -227,10 +229,10 @@ class ChatService:
                     self._set_profile_mapping(
                         chat_session_string_id, extraction_response
                     )
-
                     response_text = (
                         "Thank you for providing your information! I've created your "
                         "profile with the details you shared."
+                        "Do you use any devices to track your activity?"
                     )
 
                 except Exception as e:
@@ -269,15 +271,6 @@ class ChatService:
                         chat_session_string_id, default_profile_text
                     )
                     response_text = "I had trouble extracting your information - we will skip that for now."
-            elif not wearable_tracking_completed:
-                print("Asking about wearable devices")
-                print(
-                    f"Onboarding completed: {onboarding_completed}, "
-                    f"Profile mapping: {profile_mapping}, "
-                    f"Wearable tracking completed: {wearable_tracking_completed}"
-                )
-                response_text = "Do you use any devices to track your activity?"
-                self._set_wearable_tracking_completed(chat_session_string_id, True)
             elif not profile_completion_completed:
                 print("Profile completion message")
                 print(
@@ -286,7 +279,7 @@ class ChatService:
                     f"Wearable tracking completed: {wearable_tracking_completed}, "
                     f"Profile completion completed: {profile_completion_completed}"
                 )
-                response_text = "Thank you, I'm building your profile and calculating your performance, "
+                response_text = "Thank you, connecting to your data and I'm building your profile and calculating your performance, "
                 claude_training_fitness_index_agent = (
                     get_training_fitness_index_claude_agent(
                         user_bio_profile=self._get_profile_mapping(
@@ -294,6 +287,8 @@ class ChatService:
                         )
                     )
                 )
+                # Set the database session for loading chat history
+                claude_training_fitness_index_agent.db_session = self._db
                 response_text += (
                     await claude_training_fitness_index_agent.process_message(
                         session_id=session_uuid,
@@ -313,6 +308,8 @@ class ChatService:
                 )
                 # Get Claude agent and process the message
                 claude_agent = get_claude_agent()
+                # Set the database session for loading chat history
+                claude_agent.db_session = self._db
                 response_text = await claude_agent.process_message(
                     session_id=session_uuid,
                     message=message,
