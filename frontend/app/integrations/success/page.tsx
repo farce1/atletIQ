@@ -14,8 +14,8 @@ function IntegrationSuccessContent() {
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          // Redirect back to chat or home page
-          window.location.href = "/";
+          // Redirect to Telegram bot
+          window.location.href = "https://t.me/MyTestAthleticBot";
           return 0;
         }
         return prev - 1;
@@ -93,10 +93,10 @@ function IntegrationSuccessContent() {
 
         {/* Manual Redirect Button */}
         <button
-          onClick={() => window.location.href = "/"}
+          onClick={() => window.location.href = "https://t.me/MyTestAthleticBot"}
           className="mt-6 w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 px-6 rounded-lg font-semibold hover:from-purple-700 hover:to-indigo-700 transition-all transform hover:scale-105"
         >
-          Return Now
+          Return to Telegram Bot
         </button>
       </div>
     </div>
