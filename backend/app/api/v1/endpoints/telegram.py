@@ -3,16 +3,16 @@ from fastapi.responses import JSONResponse
 import logging
 import json
 
-from app.schemas.discord_schemas import DiscordWebhookResponse
+from app.schemas.telegram_schemas import TelegramWebhookResponse
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@router.post("/webhook", response_model=DiscordWebhookResponse)
-async def discord_webhook(request: Request):
+@router.post("/webhook", response_model=TelegramWebhookResponse)
+async def telegram_webhook(request: Request):
     """
-    Discord webhook endpoint that receives information when a new chat is created.
+    Telegram webhook endpoint that receives information when a new chat is created.
     For now, it just logs the information and returns a success message.
     """
     try:
@@ -20,7 +20,7 @@ async def discord_webhook(request: Request):
         body = await request.body()
         
         # Log the received message
-        logger.info("Discord webhook triggered - new chat created")
+        logger.info("Telegram webhook triggered - new chat created")
         logger.info(f"Received webhook data: {body.decode('utf-8') if body else 'Empty body'}")
         
         # Try to parse and log as JSON if possible
@@ -37,8 +37,8 @@ async def discord_webhook(request: Request):
         return JSONResponse(content={"message": "Webhook received", "success": True})
         
     except Exception as e:
-        logger.error(f"Error processing Discord webhook: {str(e)}")
+        logger.error(f"Error processing Telegram webhook: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="Internal server error processing Discord webhook"
+            detail="Internal server error processing Telegram webhook"
         )
