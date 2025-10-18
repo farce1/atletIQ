@@ -73,6 +73,12 @@ class Settings(BaseSettings):
 
     # ElevenLabs Configuration
     ELEVENLABS_API_KEY: SecretStr | None = None
+    ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"  # Default voice (Rachel)
+    ELEVENLABS_MODEL_ID: str = "eleven_multilingual_v2"
+    ELEVENLABS_OUTPUT_FORMAT: str = "mp3_44100_128"
+
+    # Telegram Configuration
+    TELEGRAM_BOT_TOKEN: SecretStr | None = None
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")
     @classmethod

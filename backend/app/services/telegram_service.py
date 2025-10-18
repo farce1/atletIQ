@@ -1,80 +1,115 @@
+from io import BytesIO
+from typing import BinaryIO
 import httpx
 import logging
 
 from app.core.config import settings
-from app.schemas.telegram_schemas import SendMessageRequest, SendMessageResponse
 
 logger = logging.getLogger(__name__)
 
 
 class TelegramService:
-    """Service for interacting with Telegram Bot API"""
+    def __init__(self) -> None:
+        if not settings.TELEGRAM_BOT_TOKEN:
+            raise ValueError("TELEGRAM_BOT_TOKEN is not configured in settings")
+        self.token = settings.TELEGRAM_BOT_TOKEN.get_secret_value()
+        self.base_url = f"https://api.telegram.org/bot{self.token}"
 
-    def __init__(self):
-        self.bot_token = settings.TELEGRAM_BOT_TOKEN
-        self.api_url = settings.TELEGRAM_BOT_API_URL
-
-        if not self.bot_token:
-            logger.warning("TELEGRAM_BOT_TOKEN not configured")
-
-    async def send_message(self, request: SendMessageRequest) -> SendMessageResponse:
+    async def get_file_path(self, file_id: str) -> str:
         """
-        Send a message via Telegram Bot API
+        Get the file path for a Telegram file using its file_id.
 
         Args:
-            request: SendMessageRequest with chat_id, text, and optional parameters
+            file_id: The Telegram file ID
 
         Returns:
-            SendMessageResponse with the result of the API call
+            str: The file path on Telegram servers
         """
-        if not self.bot_token:
-            return SendMessageResponse(
-                ok=False, description="Telegram bot token not configured"
-            )
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{self.base_url}/getFile", params={"file_id": file_id})
+            response.raise_for_status()
+            data = response.json()
 
-        url = f"{self.api_url}{self.bot_token.get_secret_value()}/sendMessage"
+            if not data.get("ok"):
+                raise ValueError(f"Failed to get file path: {data.get('description')}")
 
-        payload = {"chat_id": request.chat_id, "text": request.text}
+            return data["result"]["file_path"]
 
-        if request.parse_mode:
-            payload["parse_mode"] = request.parse_mode
-
-        if request.reply_to_message_id:
-            payload["reply_to_message_id"] = request.reply_to_message_id
-
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-
-                result = response.json()
-                logger.info(f"Telegram API response: {result}")
-
-                return SendMessageResponse(
-                    ok=result.get("ok", False),
-                    result=result.get("result"),
-                    description=result.get("description"),
-                )
-
-        except httpx.HTTPError as e:
-            logger.error(f"HTTP error sending Telegram message: {str(e)}")
-            return SendMessageResponse(ok=False, description=f"HTTP error: {str(e)}")
-        except Exception as e:
-            logger.error(f"Error sending Telegram message: {str(e)}")
-            return SendMessageResponse(
-                ok=False, description=f"Unexpected error: {str(e)}"
-            )
-
-    async def send_simple_message(self, chat_id: int, text: str) -> SendMessageResponse:
+    async def download_file(self, file_path: str) -> BinaryIO:
         """
-        Convenience method to send a simple message
+        Download a file from Telegram servers.
 
         Args:
-            chat_id: Telegram chat ID
-            text: Message text to send
+            file_path: The file path on Telegram servers
 
         Returns:
-            SendMessageResponse with the result
+            BinaryIO: File content as a binary stream
         """
-        request = SendMessageRequest(chat_id=chat_id, text=text)
-        return await self.send_message(request)
+        file_url = f"https://api.telegram.org/file/bot{self.token}/{file_path}"
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(file_url)
+            response.raise_for_status()
+
+            # Create a BytesIO buffer with the file content
+            file_buffer = BytesIO(response.content)
+            file_buffer.seek(0)
+
+            return file_buffer
+
+    async def download_voice_message(self, file_id: str) -> BinaryIO:
+        """
+        Download a voice message from Telegram.
+
+        Args:
+            file_id: The Telegram voice file ID
+
+        Returns:
+            BinaryIO: Voice file content as a binary stream
+        """
+        logger.info(f"Downloading voice message with file_id: {file_id}")
+        file_path = await self.get_file_path(file_id)
+        logger.info(f"Got file path: {file_path}")
+        return await self.download_file(file_path)
+
+    async def send_text_message(self, chat_id: int, text: str) -> dict:
+        """
+        Send a text message to a Telegram chat.
+
+        Args:
+            chat_id: The Telegram chat ID
+            text: The message text
+
+        Returns:
+            dict: Telegram API response
+        """
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{self.base_url}/sendMessage",
+                json={"chat_id": chat_id, "text": text}
+            )
+            response.raise_for_status()
+            return response.json()
+
+    async def send_voice_message(self, chat_id: int, voice_file: BinaryIO) -> dict:
+        """
+        Send a voice message to a Telegram chat.
+
+        Args:
+            chat_id: The Telegram chat ID
+            voice_file: The voice file as a binary stream
+
+        Returns:
+            dict: Telegram API response
+        """
+        async with httpx.AsyncClient() as client:
+            files = {"voice": ("voice.ogg", voice_file, "audio/ogg")}
+            data = {"chat_id": str(chat_id)}
+
+            response = await client.post(
+                f"{self.base_url}/sendVoice",
+                files=files,
+                data=data
+            )
+            response.raise_for_status()
+            return response.json()

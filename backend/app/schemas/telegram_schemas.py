@@ -1,24 +1,9 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any
 
 
-class TelegramWebhookMessage(BaseModel):
-    """Schema for Telegram webhook message payload"""
-    content: str
-    username: Optional[str] = None
-    avatar_url: Optional[str] = None
-    embeds: Optional[List[dict]] = None
-
-
-class TelegramWebhookResponse(BaseModel):
-    """Schema for Telegram webhook response"""
-    message: str
-    success: bool = True
-
-
-# Telegram Bot API Schemas
 class TelegramUser(BaseModel):
-    """Telegram User schema"""
+    """Schema for Telegram user"""
     id: int
     is_bot: bool
     first_name: str
@@ -28,7 +13,7 @@ class TelegramUser(BaseModel):
 
 
 class TelegramChat(BaseModel):
-    """Telegram Chat schema"""
+    """Schema for Telegram chat"""
     id: int
     type: str
     title: Optional[str] = None
@@ -37,22 +22,38 @@ class TelegramChat(BaseModel):
     last_name: Optional[str] = None
 
 
+class TelegramVoice(BaseModel):
+    """Schema for Telegram voice message"""
+    duration: int
+    mime_type: str
+    file_id: str
+    file_unique_id: str
+    file_size: int
+
+
 class TelegramMessage(BaseModel):
-    """Telegram Message schema"""
+    """Schema for Telegram message"""
     message_id: int
-    from_: Optional[TelegramUser] = None
+    from_: TelegramUser = Field(alias="from")
     chat: TelegramChat
     date: int
     text: Optional[str] = None
+    voice: Optional[TelegramVoice] = None
 
     class Config:
-        fields = {"from_": "from"}
+        populate_by_name = True
 
 
 class TelegramUpdate(BaseModel):
-    """Telegram Update schema"""
+    """Schema for Telegram update/webhook payload"""
     update_id: int
     message: Optional[TelegramMessage] = None
+
+
+class TelegramWebhookResponse(BaseModel):
+    """Schema for Telegram webhook response"""
+    message: str
+    success: bool = True
 
 
 class SendMessageRequest(BaseModel):
