@@ -1,6 +1,8 @@
 from functools import lru_cache
 from pathlib import Path
 
+from uuid import UUID
+
 from pydantic import AnyHttpUrl, PostgresDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -8,6 +10,8 @@ from app.utils.config_utils import (
     EnvironmentType,
     set_env_from_settings,
 )
+
+CONVO_MAPPING: dict[str, UUID] = {}
 
 
 class Settings(BaseSettings):

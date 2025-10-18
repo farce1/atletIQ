@@ -16,12 +16,13 @@ from app.models import ChatSession, Conversation
 from app.schemas.agent.message_roles import MessageRole
 from app.schemas.message_schemas import MessageCreate
 
+from app.core.config import CONVO_MAPPING
+
 
 class ChatService:
     def __init__(self, db: Session = Depends(get_db)):
         self._db = db
         self._settings = get_settings()
-        self.key_mapping = {}  # Maps string IDs to UUIDs
 
     def create_chat_session(self) -> UUID:
         try:
@@ -34,17 +35,23 @@ class ChatService:
 
     def get_or_create_session_for_string_id(self, string_id: str) -> UUID:
         """Get existing UUID for string_id or create new session and map it."""
-        if string_id in self.key_mapping:
-            return self.key_mapping[string_id]
+        print(CONVO_MAPPING.keys())
+        print(CONVO_MAPPING.values())
+        print(CONVO_MAPPING)
+        print(string_id)
+        if string_id in CONVO_MAPPING.keys():
+            print("Fetching existing session")
+            return CONVO_MAPPING[string_id]
 
         # Create new session and map the string_id to the UUID
+        print("Creating new session")
         session_id = self.create_chat_session()
-        self.key_mapping[string_id] = session_id
+        CONVO_MAPPING[string_id] = session_id
         return session_id
 
     def get_session_uuid(self, string_id: str) -> Optional[UUID]:
         """Get UUID for string_id if it exists, otherwise return None."""
-        return self.key_mapping.get(string_id)
+        return CONVO_MAPPING.get(string_id)
 
     def get_chat_session_by_session_id(self, session_id: UUID) -> Optional[ChatSession]:
         statement = select(ChatSession).where(ChatSession.id == session_id)
@@ -69,7 +76,7 @@ class ChatService:
         content: str,
         role: MessageRole,
     ) -> None:
-        session_id = self.key_mapping.get(session_external_id)
+        session_id = CONVO_MAPPING.get(session_external_id)
         if session_id is None:
             raise conversation_not_found_error()
 
@@ -109,9 +116,6 @@ class ChatService:
             if conversation is None:
                 conversation = self.create_conversation(session_uuid)
 
-            # Add user message to database
-            self.add_message(chat_session_string_id, message, MessageRole.USER)
-
             # Get Claude agent and process the message
             claude_agent = get_claude_agent()
             response_text = await claude_agent.process_message(
@@ -119,7 +123,8 @@ class ChatService:
                 message=message,
                 stream=self._settings.CLAUDE_AGENT_ENABLE_STREAMING,
             )
-
+            # Add user message to database
+            self.add_message(chat_session_string_id, message, MessageRole.USER)
             # Add assistant response to database
             self.add_message(
                 chat_session_string_id, response_text, role=MessageRole.ASSISTANT
