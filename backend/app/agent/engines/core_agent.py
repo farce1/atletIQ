@@ -69,7 +69,7 @@ class ClaudeAgent:
         self,
         system_prompt: Optional[str] = None,
         allowed_tools: Optional[List[str]] = None,
-        permission_mode: str = "acceptEdits",
+        permission_mode: str = "bypassPermissions",
         cwd: Optional[str] = None,
         max_conversation_length: int = 50,
         mcp_servers: Optional[Dict[str, Dict[str, Any]]] = None,
