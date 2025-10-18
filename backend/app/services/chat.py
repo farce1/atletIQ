@@ -291,7 +291,7 @@ class ChatService:
                 user_message_lower = message.lower().strip()
                 if any(word in user_message_lower for word in ["yes", "yeah", "yep", "sure", "i do", "apple", "garmin", "fitbit", "watch"]):
                     # User has a device - send authorization URL
-                    base_url = "https://athletiq-jet.vercel.app/integrations/success"  # Frontend URL
+                    base_url = "https://athletiq-jet.vercel.app"  # Frontend URL
                     auth_url = f"{base_url}/integrations/success"
                     response_text = f"Great! Please authorize your device by visiting this link: {auth_url}"
                 else:
