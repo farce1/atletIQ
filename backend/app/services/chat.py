@@ -68,6 +68,7 @@ class ChatService:
             SESSION_STATE[session_id] = {
                 "onboarding_completed": False,
                 "profile_mapping": None,
+                "wearable_tracking_asked": False,
                 "wearable_tracking_completed": False,
                 "profile_completion_completed": False,
             }
@@ -92,6 +93,16 @@ class ChatService:
         """Get profile mapping for a session."""
         state = self._get_session_state(session_id)
         return state["profile_mapping"]
+
+    def _set_wearable_tracking_asked(self, session_id: str, asked: bool) -> None:
+        """Set wearable tracking question asked status for a session."""
+        state = self._get_session_state(session_id)
+        state["wearable_tracking_asked"] = asked
+
+    def _get_wearable_tracking_asked(self, session_id: str) -> bool:
+        """Get wearable tracking question asked status for a session."""
+        state = self._get_session_state(session_id)
+        return state.get("wearable_tracking_asked", False)
 
     def _set_wearable_tracking_completed(
         self, session_id: str, completed: bool
@@ -185,6 +196,9 @@ class ChatService:
                 chat_session_string_id
             )
             profile_mapping = self._get_profile_mapping(chat_session_string_id)
+            wearable_tracking_asked = self._get_wearable_tracking_asked(
+                chat_session_string_id
+            )
             wearable_tracking_completed = self._get_wearable_tracking_completed(
                 chat_session_string_id
             )
@@ -271,6 +285,19 @@ class ChatService:
                         chat_session_string_id, default_profile_text
                     )
                     response_text = "I had trouble extracting your information - we will skip that for now."
+            elif not wearable_tracking_completed:
+                print("Processing wearable tracking response")
+                # Check if user answered yes
+                user_message_lower = message.lower().strip()
+                if any(word in user_message_lower for word in ["yes", "yeah", "yep", "sure", "i do", "apple", "garmin", "fitbit", "watch"]):
+                    # User has a device - send authorization URL
+                    base_url = "https://athletiq-jet.vercel.app/integrations/success"  # Frontend URL
+                    auth_url = f"{base_url}/integrations/success"
+                    response_text = f"Great! Please authorize your device by visiting this link: {auth_url}"
+                else:
+                    # User doesn't have a device
+                    response_text = "No problem! We'll continue with the information you've provided."
+                self._set_wearable_tracking_completed(chat_session_string_id, True)
             elif not profile_completion_completed:
                 print("Profile completion message")
                 print(
