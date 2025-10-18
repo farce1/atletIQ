@@ -21,6 +21,7 @@ class ChatService:
     def __init__(self, db: Session = Depends(get_db)):
         self._db = db
         self._settings = get_settings()
+        self.key_mapping = {}  # Maps string IDs to UUIDs
 
     def create_chat_session(self) -> UUID:
         try:
@@ -30,6 +31,20 @@ class ChatService:
             self._db.rollback()
             raise
         return session_id
+
+    def get_or_create_session_for_string_id(self, string_id: str) -> UUID:
+        """Get existing UUID for string_id or create new session and map it."""
+        if string_id in self.key_mapping:
+            return self.key_mapping[string_id]
+
+        # Create new session and map the string_id to the UUID
+        session_id = self.create_chat_session()
+        self.key_mapping[string_id] = session_id
+        return session_id
+
+    def get_session_uuid(self, string_id: str) -> Optional[UUID]:
+        """Get UUID for string_id if it exists, otherwise return None."""
+        return self.key_mapping.get(string_id)
 
     def get_chat_session_by_session_id(self, session_id: UUID) -> Optional[ChatSession]:
         statement = select(ChatSession).where(ChatSession.id == session_id)
@@ -50,10 +65,14 @@ class ChatService:
 
     def add_message(
         self,
-        session_id: UUID,
+        session_external_id: str,
         content: str,
         role: MessageRole,
     ) -> None:
+        session_id = self.key_mapping.get(session_external_id)
+        if session_id is None:
+            raise conversation_not_found_error()
+
         try:
             conversation = get_conversation_by_session_id(
                 session=self._db, session_id=session_id
@@ -74,35 +93,53 @@ class ChatService:
     async def process_query(
         self,
         message: str,
-        chat_session_id: UUID,
+        chat_session_string_id: str,
     ) -> str:
         """Process a query using the Claude agent."""
         try:
+            # Get or create session UUID for the string ID
+            session_uuid = self.get_or_create_session_for_string_id(
+                chat_session_string_id
+            )
+
+            # Ensure conversation exists for this session
+            conversation = get_conversation_by_session_id(
+                session=self._db, session_id=session_uuid
+            )
+            if conversation is None:
+                conversation = self.create_conversation(session_uuid)
+
             # Add user message to database
-            self.add_message(chat_session_id, message, MessageRole.USER)
+            self.add_message(chat_session_string_id, message, MessageRole.USER)
 
             # Get Claude agent and process the message
             claude_agent = get_claude_agent()
             response_text = await claude_agent.process_message(
-                session_id=chat_session_id,
+                session_id=session_uuid,
                 message=message,
                 stream=self._settings.CLAUDE_AGENT_ENABLE_STREAMING,
             )
 
             # Add assistant response to database
-            self.add_message(chat_session_id, response_text, role=MessageRole.ASSISTANT)
+            self.add_message(
+                chat_session_string_id, response_text, role=MessageRole.ASSISTANT
+            )
 
             return response_text
 
         except ClaudeAgentError as e:
             # Log the error and return a fallback response
             error_message = f"I apologize, but I encountered an error: {str(e)}"
-            self.add_message(chat_session_id, error_message, role=MessageRole.ASSISTANT)
+            self.add_message(
+                chat_session_string_id, error_message, role=MessageRole.ASSISTANT
+            )
             return error_message
         except Exception:
             # Log unexpected errors and return a generic error message
             error_message = (
                 "I apologize, but I encountered an unexpected error. Please try again."
             )
-            self.add_message(chat_session_id, error_message, role=MessageRole.ASSISTANT)
+            self.add_message(
+                chat_session_string_id, error_message, role=MessageRole.ASSISTANT
+            )
             return error_message

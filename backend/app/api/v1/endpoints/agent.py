@@ -1,5 +1,3 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends
 from starlette.requests import Request
 
@@ -15,11 +13,9 @@ async def query_chat_agent(
     request: Request,
     agent_request: BaseAgentQueryRequest,
     sessions: SessionsManagerDep,
-    chat_session_id: UUID,
+    chat_id: str,
     chat_service: ChatService = Depends(),
 ) -> BaseAgentQueryResponse:
-    """Query the Claude agent with non-streaming response by default."""
-
-    response = await chat_service.process_query(agent_request.message, chat_session_id)
+    response = await chat_service.process_query(agent_request.message, chat_id)
 
     return BaseAgentQueryResponse(response=response)
