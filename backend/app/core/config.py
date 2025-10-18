@@ -56,6 +56,10 @@ class Settings(BaseSettings):
 
     # Integrations
     # ------------>
+    
+    # Telegram Bot Configuration
+    TELEGRAM_BOT_TOKEN: SecretStr | None = None
+    TELEGRAM_BOT_API_URL: str = "https://api.telegram.org/bot"
 
     # Claude Agent Configuration
     CLAUDE_AGENT_SYSTEM_PROMPT: str = (
@@ -66,6 +70,9 @@ class Settings(BaseSettings):
     CLAUDE_AGENT_WORKING_DIR: str | None = None
     CLAUDE_AGENT_MAX_CONVERSATION_LENGTH: int = 50
     CLAUDE_AGENT_ENABLE_STREAMING: bool = False
+
+    # ElevenLabs Configuration
+    ELEVENLABS_API_KEY: SecretStr | None = None
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")
     @classmethod
