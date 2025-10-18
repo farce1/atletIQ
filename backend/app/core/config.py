@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 from uuid import UUID
 
@@ -75,6 +76,14 @@ class Settings(BaseSettings):
     CLAUDE_AGENT_WORKING_DIR: str | None = None
     CLAUDE_AGENT_MAX_CONVERSATION_LENGTH: int = 50
     CLAUDE_AGENT_ENABLE_STREAMING: bool = False
+    
+    # MCP Server Configuration
+    CLAUDE_AGENT_MCP_SERVERS: dict[str, dict[str, Any]] = {
+        "healthion_mcp_server": {
+            "type": "http",
+            "url": "https://voiceless-azure-sparrow.fastmcp.app/mcp"
+        }
+    }
 
     # ElevenLabs Configuration
     ELEVENLABS_API_KEY: SecretStr | None = None

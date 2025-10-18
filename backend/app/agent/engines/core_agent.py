@@ -13,6 +13,7 @@ from claude_agent_sdk import (
     CLINotFoundError,
     ProcessError,
     CLIJSONDecodeError,
+    McpServerConfig,
 )
 from pydantic import BaseModel
 
@@ -22,6 +23,29 @@ from app.agent.prompts.agent_prompts import TEXT_QUERY_EXTRACT_PROMPT
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
+
+
+def create_mcp_http_server_config(
+    name: str, url: str, headers: Optional[Dict[str, str]] = None
+) -> Dict[str, Any]:
+    """
+    Create an MCP HTTP server configuration.
+    
+    Args:
+        name: Name of the MCP server
+        url: URL of the MCP server
+        headers: Optional headers for the HTTP request
+        
+    Returns:
+        Dict[str, Any]: Configuration for the MCP HTTP server
+    """
+    config: Dict[str, Any] = {
+        "type": "http",
+        "url": url,
+    }
+    if headers:
+        config["headers"] = headers
+    return config
 
 
 class ConversationContext(BaseModel):
@@ -48,6 +72,7 @@ class ClaudeAgent:
         permission_mode: str = "acceptEdits",
         cwd: Optional[str] = None,
         max_conversation_length: int = 50,
+        mcp_servers: Optional[Dict[str, Dict[str, Any]]] = None,
     ):
         """
         Initialize the Claude Agent.
@@ -58,12 +83,14 @@ class ClaudeAgent:
             permission_mode: Permission mode for tool usage
             cwd: Working directory for the agent
             max_conversation_length: Maximum number of messages to keep in context
+            mcp_servers: Dictionary of MCP server configurations
         """
         self.system_prompt = system_prompt or self._get_default_system_prompt()
         self.allowed_tools = allowed_tools or ["Read", "Write", "Bash", "WebSearch"]
         self.permission_mode = permission_mode
         self.cwd = cwd
         self.max_conversation_length = max_conversation_length
+        self.mcp_servers = mcp_servers or {}
 
         # Conversation contexts by session ID
         self._conversations: Dict[UUID, ConversationContext] = {}
@@ -74,6 +101,7 @@ class ClaudeAgent:
             allowed_tools=self.allowed_tools,
             permission_mode=self.permission_mode,
             cwd=self.cwd,
+            mcp_servers=self.mcp_servers,
         )
 
     def _get_default_system_prompt(self) -> str:
@@ -258,7 +286,42 @@ Always maintain a professional and friendly tone.
             allowed_tools=self.allowed_tools,
             permission_mode=self.permission_mode,
             cwd=self.cwd,
+            mcp_servers=self.mcp_servers,
         )
+
+    def update_mcp_servers(self, mcp_servers: Dict[str, Dict[str, Any]]) -> None:
+        """Update the MCP servers for the agent."""
+        self.mcp_servers = mcp_servers
+        self._agent_options = ClaudeAgentOptions(
+            system_prompt=self.system_prompt,
+            allowed_tools=self.allowed_tools,
+            permission_mode=self.permission_mode,
+            cwd=self.cwd,
+            mcp_servers=self.mcp_servers,
+        )
+
+    def add_mcp_server(self, name: str, config: Dict[str, Any]) -> None:
+        """Add a single MCP server to the agent."""
+        self.mcp_servers[name] = config
+        self._agent_options = ClaudeAgentOptions(
+            system_prompt=self.system_prompt,
+            allowed_tools=self.allowed_tools,
+            permission_mode=self.permission_mode,
+            cwd=self.cwd,
+            mcp_servers=self.mcp_servers,
+        )
+
+    def remove_mcp_server(self, name: str) -> None:
+        """Remove an MCP server from the agent."""
+        if name in self.mcp_servers:
+            del self.mcp_servers[name]
+            self._agent_options = ClaudeAgentOptions(
+                system_prompt=self.system_prompt,
+                allowed_tools=self.allowed_tools,
+                permission_mode=self.permission_mode,
+                cwd=self.cwd,
+                mcp_servers=self.mcp_servers,
+            )
 
     def get_session_stats(self, session_id: UUID) -> Dict[str, Any]:
         """Get statistics for a session."""
@@ -292,6 +355,7 @@ def get_claude_agent() -> ClaudeAgent:
             permission_mode=settings.CLAUDE_AGENT_PERMISSION_MODE,
             cwd=settings.CLAUDE_AGENT_WORKING_DIR,
             max_conversation_length=settings.CLAUDE_AGENT_MAX_CONVERSATION_LENGTH,
+            mcp_servers=settings.CLAUDE_AGENT_MCP_SERVERS,
         )
     return _global_agent
 
@@ -306,6 +370,7 @@ def get_extractor_claude_agent() -> ClaudeAgent:
             permission_mode="acceptEdits",
             cwd=None,
             max_conversation_length=50,
+            mcp_servers={},
         )
     return _global_extractor_agent
 
@@ -316,6 +381,7 @@ def create_general_agent() -> ClaudeAgent:
         system_prompt="You are a helpful AI assistant specialized in general queries and tasks.",
         allowed_tools=["Read", "Write", "Bash", "WebSearch"],
         permission_mode="acceptEdits",
+        mcp_servers={},
     )
 
 
@@ -331,4 +397,5 @@ def create_specialized_agent(
         system_prompt=system_prompt,
         allowed_tools=tools,
         permission_mode="acceptEdits",
+        mcp_servers={},
     )
