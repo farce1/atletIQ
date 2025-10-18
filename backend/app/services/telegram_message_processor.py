@@ -33,7 +33,6 @@ class TelegramMessageProcessor:
         session_id = self.get_session_id(chat_id)
         logger.info(f"Processing query for session {session_id}: {message}")
 
-        # For now, always respond with "Hello World" in English
         response_text = await self.chat_service.process_query(message, chat_id)
 
         logger.info(f"Generated response: {response_text}")
