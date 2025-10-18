@@ -10,8 +10,11 @@ from app.utils.config_utils import (
     EnvironmentType,
     set_env_from_settings,
 )
+from app.schemas.agent.user_profile import UserProfile
 
 CONVO_MAPPING: dict[str, UUID] = {}
+
+PROFILE_MAPPING: UserProfile | None = None
 
 
 class Settings(BaseSettings):
@@ -23,6 +26,8 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     ENABLE_ADVANCED_MODELS: bool = False
     ENVIRONMENT: EnvironmentType = EnvironmentType.TEST
+
+    ONBOARDING_COMPLETED: bool = False
 
     BACKEND_CORS_ORIGINS: list[AnyHttpUrl] = []
     BACKEND_CORS_ALLOW_ALL: bool = False
@@ -56,7 +61,7 @@ class Settings(BaseSettings):
 
     # Integrations
     # ------------>
-    
+
     # Telegram Bot Configuration
     TELEGRAM_BOT_TOKEN: SecretStr | None = None
     TELEGRAM_BOT_API_URL: str = "https://api.telegram.org/bot"

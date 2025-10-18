@@ -18,6 +18,8 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 
+from app.agent.prompts.agent_prompts import TEXT_QUERY_EXTRACT_PROMPT
+
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
@@ -275,8 +277,9 @@ class ClaudeAgentError(Exception):
     pass
 
 
-# Global agent instance
+# Global agent instances
 _global_agent: Optional[ClaudeAgent] = None
+_global_extractor_agent: Optional[ClaudeAgent] = None
 
 
 def get_claude_agent() -> ClaudeAgent:
@@ -291,6 +294,20 @@ def get_claude_agent() -> ClaudeAgent:
             max_conversation_length=settings.CLAUDE_AGENT_MAX_CONVERSATION_LENGTH,
         )
     return _global_agent
+
+
+def get_extractor_claude_agent() -> ClaudeAgent:
+    """Get the global extractor Claude agent instance."""
+    global _global_extractor_agent
+    if _global_extractor_agent is None:
+        _global_extractor_agent = ClaudeAgent(
+            system_prompt=TEXT_QUERY_EXTRACT_PROMPT,
+            allowed_tools=[],
+            permission_mode="acceptEdits",
+            cwd=None,
+            max_conversation_length=50,
+        )
+    return _global_extractor_agent
 
 
 def create_general_agent() -> ClaudeAgent:
