@@ -4,9 +4,6 @@ from fastapi import APIRouter, Depends
 from starlette.requests import Request
 
 from app.api.deps import SessionsManagerDep
-from app.api.exceptions.chat_exceptions import (
-    session_not_found_error,
-)
 from app.schemas.agent.agent_query import BaseAgentQueryRequest, BaseAgentQueryResponse
 from app.services.chat import ChatService
 
@@ -21,14 +18,8 @@ async def query_chat_agent(
     chat_session_id: UUID,
     chat_service: ChatService = Depends(),
 ) -> BaseAgentQueryResponse:
+    """Query the Claude agent with non-streaming response by default."""
 
-    chat_agent_workflow = sessions.get_chat_session(chat_session_id)
-
-    if chat_agent_workflow is None:
-        raise session_not_found_error()
-
-    response = await chat_service.process_query(
-        agent_request.message, chat_session_id, chat_agent_workflow
-    )
+    response = await chat_service.process_query(agent_request.message, chat_session_id)
 
     return BaseAgentQueryResponse(response=response)
