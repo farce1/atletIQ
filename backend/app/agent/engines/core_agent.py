@@ -351,7 +351,9 @@ def get_claude_agent() -> ClaudeAgent:
     if _global_agent is None:
         _global_agent = ClaudeAgent(
             system_prompt=settings.CLAUDE_AGENT_SYSTEM_PROMPT,
-            allowed_tools=settings.CLAUDE_AGENT_ALLOWED_TOOLS,
+            allowed_tools=[
+                "mcp__healthion_mcp_server__fetch_workouts"
+            ],
             permission_mode=settings.CLAUDE_AGENT_PERMISSION_MODE,
             cwd=settings.CLAUDE_AGENT_WORKING_DIR,
             max_conversation_length=settings.CLAUDE_AGENT_MAX_CONVERSATION_LENGTH,
