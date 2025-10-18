@@ -72,7 +72,7 @@ export default function LandingPage() {
                 asChild
               >
                 <a
-                  href="https://t.me/yourusername"
+                  href="https://t.me/MyTestAthleticBot"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
