@@ -24,6 +24,7 @@ from app.crud.message import get_messages_by_conversation_id
 from app.agent.prompts.agent_prompts import (
     TEXT_QUERY_EXTRACT_PROMPT,
     TEXT_TRAINING_FITNESS_INDEX_PROMPT,
+    TEXT_AGENT_PRIMING_PROMPT,
 )
 
 logger = logging.getLogger(__name__)
@@ -391,18 +392,31 @@ _global_extractor_agent: Optional[ClaudeAgent] = None
 _global_training_fitness_agent: Optional[ClaudeAgent] = None
 
 
-def get_claude_agent() -> ClaudeAgent:
-    """Get the global Claude agent instance."""
+def get_claude_agent(user_bio_profile: str = None) -> ClaudeAgent:
+    """Get the global Claude agent instance with optional user profile."""
     global _global_agent
+
+    # Create system prompt with user profile if provided
+    system_prompt = TEXT_AGENT_PRIMING_PROMPT
+    if user_bio_profile:
+        system_prompt = TEXT_AGENT_PRIMING_PROMPT.format(
+            user_bio_profile=user_bio_profile
+        )
+
     if _global_agent is None:
         _global_agent = ClaudeAgent(
-            system_prompt=settings.CLAUDE_AGENT_SYSTEM_PROMPT,
+            system_prompt=system_prompt,
             allowed_tools=["mcp__healthion_mcp_server__fetch_workouts"],
             permission_mode=settings.CLAUDE_AGENT_PERMISSION_MODE,
             cwd=settings.CLAUDE_AGENT_WORKING_DIR,
             max_conversation_length=settings.CLAUDE_AGENT_MAX_CONVERSATION_LENGTH,
             mcp_servers=settings.CLAUDE_AGENT_MCP_SERVERS,
         )
+    else:
+        # Update the system prompt if user profile is provided
+        if user_bio_profile:
+            _global_agent.update_system_prompt(system_prompt)
+
     return _global_agent
 
 

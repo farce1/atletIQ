@@ -306,8 +306,9 @@ class ChatService:
                     f"Wearable tracking completed: {wearable_tracking_completed}, "
                     f"Profile completion completed: {profile_completion_completed}"
                 )
-                # Get Claude agent and process the message
-                claude_agent = get_claude_agent()
+                # Get Claude agent with user profile and process the message
+                user_profile = self._get_profile_mapping(chat_session_string_id)
+                claude_agent = get_claude_agent(user_bio_profile=user_profile)
                 # Set the database session for loading chat history
                 claude_agent.db_session = self._db
                 response_text = await claude_agent.process_message(
