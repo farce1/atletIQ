@@ -1,4 +1,3 @@
-from typing import BinaryIO
 import logging
 from sqlalchemy.orm import Session
 
@@ -35,7 +34,7 @@ class TelegramMessageProcessor:
         logger.info(f"Processing query for session {session_id}: {message}")
 
         # For now, always respond with "Hello World" in English
-        response_text = "Hello World"
+        response_text = await self.chat_service.process_query(message, chat_id)
 
         logger.info(f"Generated response: {response_text}")
         return response_text
