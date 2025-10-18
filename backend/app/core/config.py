@@ -81,7 +81,7 @@ class Settings(BaseSettings):
     CLAUDE_AGENT_MCP_SERVERS: dict[str, dict[str, Any]] = {
         "healthion_mcp_server": {
             "type": "http",
-            "url": "https://voiceless-azure-sparrow.fastmcp.app/mcp"
+            "url": "https://peaceful-rose-lark.fastmcp.app/mcp"
         }
     }
 
