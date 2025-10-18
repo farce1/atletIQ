@@ -67,6 +67,9 @@ class Settings(BaseSettings):
     CLAUDE_AGENT_MAX_CONVERSATION_LENGTH: int = 50
     CLAUDE_AGENT_ENABLE_STREAMING: bool = False
 
+    # ElevenLabs Configuration
+    ELEVENLABS_API_KEY: SecretStr | None = None
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
