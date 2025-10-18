@@ -159,9 +159,12 @@ Always maintain a professional and friendly tone.
                 return await self._process_message_sync(session_id, full_prompt)
 
         except CLINotFoundError:
-            logger.error(
-                "Claude Code CLI not found. Please install: npm install -g @anthropic-ai/claude-code"
+            error_msg = (
+                "Claude Code CLI not found. Please ensure it is installed in the container. "
+                "The CLI should be installed during the Docker build process. "
+                "If you're running locally, install with: npm install -g @anthropic-ai/claude-code"
             )
+            logger.error(error_msg)
             raise ClaudeAgentError("Claude Code CLI not installed")
         except ProcessError as e:
             logger.error(f"Claude process failed with exit code: {e.exit_code}")
