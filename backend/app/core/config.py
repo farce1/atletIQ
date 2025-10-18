@@ -53,6 +53,16 @@ class Settings(BaseSettings):
     # Integrations
     # ------------>
 
+    # Claude Agent Configuration
+    CLAUDE_AGENT_SYSTEM_PROMPT: str = (
+        "You are a specialized, intelligent AI assistant designated to help users with their queries."
+    )
+    CLAUDE_AGENT_ALLOWED_TOOLS: list[str] = ["Read", "Write", "Bash", "WebSearch"]
+    CLAUDE_AGENT_PERMISSION_MODE: str = "acceptEdits"
+    CLAUDE_AGENT_WORKING_DIR: str | None = None
+    CLAUDE_AGENT_MAX_CONVERSATION_LENGTH: int = 50
+    CLAUDE_AGENT_ENABLE_STREAMING: bool = False
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: str | list[str]) -> list[str] | str:
