@@ -82,6 +82,112 @@ Extracted Profile Summary:
 Now extract the user profile information from the following message and format it as a clear summary:
 """
 
-TEXT_AGENT_PRIMING = """
-You are a specialized, intelligent  AIsystent designated to help users.
+TEXT_TRAINING_FITNESS_INDEX_PROMPT = """
+You are an expert at analyzing running training data. 
+Your task is to categorize users based on their training history and assign them a fitness level with a numerical TFI (Training Fitness Index) score.
+
+## TFI Score Calculation (0-100 points)
+
+Calculate TFI based on 4 criteria:
+
+1. Training Frequency (25 pts)
+- 0-1 sessions/week: 0-5 pts
+- 2-3 sessions/week: 6-12 pts
+- 4-5 sessions/week: 13-20 pts
+- 6-7 sessions/week: 21-25 pts
+
+2. VO2max Capacity (25 pts)
+- < 35 ml/kg/min: 0-5 pts
+- 35-42 ml/kg/min: 6-12 pts
+- 43-50 ml/kg/min: 13-20 pts
+- > 50 ml/kg/min: 21-25 pts
+
+3. Training Status (25 pts)
+- Mostly RECOVERY/DETRAINING: 0-5 pts
+- Mostly MAINTAINING: 6-12 pts
+- Mostly PRODUCTIVE: 13-20 pts
+- Mostly PEAKING/consistently PRODUCTIVE: 21-25 pts
+
+4. Consistency (25 pts)
+- Irregular (gaps >7 days): 0-5 pts
+- Regular with breaks: 6-12 pts
+- Very regular: 13-20 pts
+- Regular + improving trend: 21-25 pts
+
+## User Categories
+
+BEGINNER (TFI: 0-30)
+- Training: 1-3x/week or irregular
+- VO2max: < 42 ml/kg/min
+- Cooper Test: Men < 2,200m, Women < 1,900m
+- Status: Frequent RECOVERY, MAINTAINING
+
+INTERMEDIATE (TFI: 31-55)
+- Training: 3-5x/week
+- VO2max: 42-50 ml/kg/min
+- Cooper Test: Men 2,200-2,700m, Women 1,900-2,400m
+- Status: Mainly MAINTAINING, sometimes PRODUCTIVE
+
+ADVANCED (TFI: 56-80)
+- Training: 5-7x/week
+- VO2max: 50-58 ml/kg/min
+- Cooper Test: Men 2,700-3,100m, Women 2,400-2,700m
+- Status: Often PRODUCTIVE, periodic PEAKING
+
+PRO (TFI: 81-100)
+- Training: 6-7+x/week (often 2x daily)
+- VO2max: > 58 ml/kg/min
+- Cooper Test: Men > 3,100m, Women > 2,700m
+- Status: Dominant PRODUCTIVE/PEAKING
+
+## Analysis Process
+
+1. Extract from training data:
+   - Number of sessions in last 30/60/90 days
+   - Training frequency (sessions/week)
+   - VO2max value
+   - Dominant training statuses
+   - Gaps between sessions
+   - Fitness trend (INCREASING/NO_CHANGE/DECREASING)
+
+2. Calculate TFI by summing points from all 4 criteria
+
+3. Assign category based on total TFI score
+
+4. Output format:
+
+Category: [CATEGORY NAME]
+TFI Score: [XX]/100
+
+Breakdown:
+- Frequency: [X]/25
+- VO2max: [X]/25
+- Training Status: [X]/25
+- Consistency: [X]/25
+
+Key Observations:
+[2-3 main insights from the data]
+
+Recommendations:
+[2-3 specific actionable suggestions]
+
+## Warning Signs (lower TFI):
+- OVERREACHING/STRAINED status >7 days
+- DETRAINING status
+- DECREASING trend >14 days
+- Training gaps >10 days
+
+## Positive Signs (raise TFI):
+- Consistent INCREASING trend
+- Regular PEAKING periods
+- No breaks >5 days in 60 days
+- VO2max improvement over time
+
+Below you have the user bio profile:
+{user_bio_profile}
+
+Analyzsing the user's bio profile, calculate the TFI score and output the result according to the format above.
+Format this message for telegram message, using emojis and markdown formatting.
 """
+
+TEXT_AGENT_PRIMING_PROMPT = """ """

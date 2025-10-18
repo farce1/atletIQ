@@ -18,7 +18,10 @@ from pydantic import BaseModel
 
 from app.core.config import get_settings
 
-from app.agent.prompts.agent_prompts import TEXT_QUERY_EXTRACT_PROMPT
+from app.agent.prompts.agent_prompts import (
+    TEXT_QUERY_EXTRACT_PROMPT,
+    TEXT_TRAINING_FITNESS_INDEX_PROMPT,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -280,6 +283,7 @@ class ClaudeAgentError(Exception):
 # Global agent instances
 _global_agent: Optional[ClaudeAgent] = None
 _global_extractor_agent: Optional[ClaudeAgent] = None
+_global_training_fitness_agent: Optional[ClaudeAgent] = None
 
 
 def get_claude_agent() -> ClaudeAgent:
@@ -308,6 +312,22 @@ def get_extractor_claude_agent() -> ClaudeAgent:
             max_conversation_length=50,
         )
     return _global_extractor_agent
+
+
+def get_training_fitness_index_claude_agent(user_bio_profile: str) -> ClaudeAgent:
+    """Get the global training fitness index Claude agent instance."""
+    global _global_training_fitness_agent
+    if _global_training_fitness_agent is None:
+        _global_training_fitness_agent = ClaudeAgent(
+            system_prompt=TEXT_TRAINING_FITNESS_INDEX_PROMPT.format(
+                user_bio_profile=user_bio_profile
+            ),
+            allowed_tools=[],
+            permission_mode="acceptEdits",
+            cwd=None,
+            max_conversation_length=50,
+        )
+    return _global_training_fitness_agent
 
 
 def create_general_agent() -> ClaudeAgent:

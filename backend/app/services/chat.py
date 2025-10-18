@@ -8,6 +8,7 @@ from sqlalchemy.sql.expression import select
 from app.agent.engines.core_agent import (
     get_claude_agent,
     get_extractor_claude_agent,
+    get_training_fitness_index_claude_agent,
     ClaudeAgentError,
 )
 from app.api.deps import get_db
@@ -285,10 +286,22 @@ class ChatService:
                     f"Wearable tracking completed: {wearable_tracking_completed}, "
                     f"Profile completion completed: {profile_completion_completed}"
                 )
-                response_text = (
-                    "Thank you, I'm building your profile and calculating your performance, "
-                    "you can ask any questions now"
+                response_text = "Thank you, I'm building your profile and calculating your performance, "
+                claude_training_fitness_index_agent = (
+                    get_training_fitness_index_claude_agent(
+                        user_bio_profile=self._get_profile_mapping(
+                            chat_session_string_id
+                        )
+                    )
                 )
+                response_text += (
+                    await claude_training_fitness_index_agent.process_message(
+                        session_id=session_uuid,
+                        message=profile_mapping,
+                        stream=False,
+                    )
+                )
+
                 self._set_profile_completion_completed(chat_session_string_id, True)
             else:
                 print("Processing message")
