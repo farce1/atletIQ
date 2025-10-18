@@ -1,27 +1,20 @@
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
 
-from pydantic import AnyHttpUrl, Field, PostgresDsn, SecretStr, ValidationInfo, field_validator
+from pydantic import AnyHttpUrl, PostgresDsn, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from app.utils.config_utils import (
-    EncryptedField,
     EnvironmentType,
-    FernetDecryptorField,
     set_env_from_settings,
 )
 
 
 class Settings(BaseSettings):
-    FERNET_DECRYPTOR: FernetDecryptorField = Field("MASTER_KEY")  # type: ignore[assignment]
-
-    PROJECT_NAME: str = "sample-microservice"
+    PROJECT_NAME: str = "atlet-iq"
     SERVER_HOST: AnyHttpUrl
     API_V1_STR: str = "/api/v1"
     VERSION: str = "0.0.1"
-
-    API_KEY: EncryptedField
 
     DEBUG: bool = False
     ENABLE_ADVANCED_MODELS: bool = False
@@ -59,13 +52,6 @@ class Settings(BaseSettings):
 
     # Integrations
     # ------------>
-
-    @field_validator("*", mode="after")
-    @classmethod
-    def _decryptor(cls, v: Any, validation_info: ValidationInfo, *args, **kwargs) -> Any:
-        if isinstance(v, EncryptedField):
-            return v.get_decrypted_value(validation_info.data["FERNET_DECRYPTOR"])
-        return v
 
     @field_validator("BACKEND_CORS_ORIGINS", mode="after")
     @classmethod

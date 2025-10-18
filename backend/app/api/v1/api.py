@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 
-from app.api.v1.endpoints import dummy_endpoint
-from app.services.auth import authorise_request
+from app.api.v1.endpoints import agent, chat
 
 api_router = APIRouter()
 api_router.include_router(
-    dummy_endpoint.router,
-    prefix="/dummy",
-    tags=["dummy"],
-    dependencies=[Depends(authorise_request)],
+    agent.router,
+    prefix="/agent",
+    tags=["agent"],
+)
+api_router.include_router(
+    chat.router,
+    prefix="/chat",
+    tags=["chat"],
 )
