@@ -67,6 +67,8 @@ class ChatService:
             SESSION_STATE[session_id] = {
                 "onboarding_completed": False,
                 "profile_mapping": None,
+                "wearable_tracking_completed": False,
+                "profile_completion_completed": False,
             }
         return SESSION_STATE[session_id]
 
@@ -89,6 +91,30 @@ class ChatService:
         """Get profile mapping for a session."""
         state = self._get_session_state(session_id)
         return state["profile_mapping"]
+
+    def _set_wearable_tracking_completed(
+        self, session_id: str, completed: bool
+    ) -> None:
+        """Set wearable tracking completion status for a session."""
+        state = self._get_session_state(session_id)
+        state["wearable_tracking_completed"] = completed
+
+    def _get_wearable_tracking_completed(self, session_id: str) -> bool:
+        """Get wearable tracking completion status for a session."""
+        state = self._get_session_state(session_id)
+        return state.get("wearable_tracking_completed", False)
+
+    def _set_profile_completion_completed(
+        self, session_id: str, completed: bool
+    ) -> None:
+        """Set profile completion status for a session."""
+        state = self._get_session_state(session_id)
+        state["profile_completion_completed"] = completed
+
+    def _get_profile_completion_completed(self, session_id: str) -> bool:
+        """Get profile completion status for a session."""
+        state = self._get_session_state(session_id)
+        return state.get("profile_completion_completed", False)
 
     def get_chat_session_by_session_id(self, session_id: UUID) -> Optional[ChatSession]:
         statement = select(ChatSession).where(ChatSession.id == session_id)
@@ -158,6 +184,12 @@ class ChatService:
                 chat_session_string_id
             )
             profile_mapping = self._get_profile_mapping(chat_session_string_id)
+            wearable_tracking_completed = self._get_wearable_tracking_completed(
+                chat_session_string_id
+            )
+            profile_completion_completed = self._get_profile_completion_completed(
+                chat_session_string_id
+            )
 
             if not onboarding_completed:
                 print("Onboarding")
@@ -197,8 +229,7 @@ class ChatService:
 
                     response_text = (
                         "Thank you for providing your information! I've created your "
-                        "profile with the details you shared. How can I help you with "
-                        "your running goals today?"
+                        "profile with the details you shared."
                     )
 
                 except Exception as e:
@@ -236,14 +267,36 @@ class ChatService:
                     self._set_profile_mapping(
                         chat_session_string_id, default_profile_text
                     )
-                    response_text = (
-                        "I had trouble extracting your information - we will skip that for now."
-                        + "How can I help you with your running goals today?"
-                    )
+                    response_text = "I had trouble extracting your information - we will skip that for now."
+            elif not wearable_tracking_completed:
+                print("Asking about wearable devices")
+                print(
+                    f"Onboarding completed: {onboarding_completed}, "
+                    f"Profile mapping: {profile_mapping}, "
+                    f"Wearable tracking completed: {wearable_tracking_completed}"
+                )
+                response_text = "Do you use any devices to track your activity?"
+                self._set_wearable_tracking_completed(chat_session_string_id, True)
+            elif not profile_completion_completed:
+                print("Profile completion message")
+                print(
+                    f"Onboarding completed: {onboarding_completed}, "
+                    f"Profile mapping: {profile_mapping}, "
+                    f"Wearable tracking completed: {wearable_tracking_completed}, "
+                    f"Profile completion completed: {profile_completion_completed}"
+                )
+                response_text = (
+                    "Thank you, I'm building your profile and calculating your performance, "
+                    "you can ask any questions now"
+                )
+                self._set_profile_completion_completed(chat_session_string_id, True)
             else:
                 print("Processing message")
                 print(
-                    f"Onboarding completed: {onboarding_completed}, Profile mapping: {profile_mapping}"
+                    f"Onboarding completed: {onboarding_completed}, "
+                    f"Profile mapping: {profile_mapping}, "
+                    f"Wearable tracking completed: {wearable_tracking_completed}, "
+                    f"Profile completion completed: {profile_completion_completed}"
                 )
                 # Get Claude agent and process the message
                 claude_agent = get_claude_agent()
