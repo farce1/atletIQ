@@ -1,0 +1,103 @@
+services:
+  atlet-iq:
+    container_name: atlet-iq
+    image: atlet-iq:latest
+    working_dir: /root_project
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: scripts/start/app.sh
+    env_file:
+      - config/.env
+    volumes:
+      - .:/root_project
+      - /root_project/.venv
+    ports:
+      - 8000:8000
+    networks:
+      - agent-flow-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure
+
+  postgres:
+    container_name: atlet-iq-db
+    image: postgres:16
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: atlet-iq
+      POSTGRES_PASSWORD: atlet-iq
+      POSTGRES_DB: atlet-iq
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlet-iq -d atlet-iq"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - agent-flow-network
+
+  # Celery setup
+  celery-worker:
+    container_name: celery-worker
+    image: atlet-iq:latest
+    command: scripts/start/worker.sh
+    volumes:
+      - .:/root_project
+      - /root_project/.venv
+    env_file:
+      - config/.env
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - agent-flow-network
+
+  celery-beat:
+    container_name: celery-beat
+    image: atlet-iq:latest
+    command: scripts/start/beat.sh
+    volumes:
+      - .:/root_project
+      - /root_project/.venv
+    env_file:
+      - config/.env
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - agent-flow-network
+
+  flower:
+    container_name: flower
+    image: atlet-iq:latest
+    command: scripts/start/flower.sh
+    volumes:
+      - .:/root_project
+      - /root_project/.venv
+    env_file:
+      - config/.env
+    ports:
+      - 5555:5555
+    depends_on:
+      - redis
+      - postgres
+    networks:
+      - agent-flow-network
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/var/lib/redis/data
+    networks:
+      - agent-flow-network
+
+volumes:
+  postgres_data:
+  redis_data:
+networks:
+  agent-flow-network:
+    name: agent-flow-network

@@ -1,0 +1,19 @@
+variables:
+  DEPLOY_PATH: "~"
+
+stages:
+  - qa
+  - build
+
+code-quality:
+  stage: qa
+  image: python:3.13-slim
+  before_script:
+    - pip install uv
+    - uv sync --group code-quality
+  script:
+    - uv run ruff check --select=I,F,FAST,ANN,ASYNC,COM,T10,PT,RET,SIM,N,E,W --ignore=ANN002,ANN003,ANN204,ANN401
+    - uv run ruff format --check
+    - uv run ty check
+  rules:
+    - when: always

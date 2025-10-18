@@ -1,0 +1,77 @@
+[project]
+name = "boilerplate-fastapi-base"
+version = "0.1.0"
+description = "Template for microservices"
+requires-python = ">=3.13"
+dependencies = [
+    "alembic>=1.16.4",
+    "asyncpg>=0.30.0",
+    "celery>=5.5.3",
+    "cryptography>=45.0.5",
+    "fastapi>=0.116.1",
+    "fastapi-cli>=0.0.8",
+    "flower>=2.0.1",
+    "greenlet>=3.2.3",
+    "httpx>=0.28.1",
+    "passlib>=1.7.4",
+    "psycopg>=3.2.9",
+    "pydantic-settings>=2.10.1",
+    "redis>=6.2.0",
+    "sentry-sdk>=2.33.1",
+    "sqladmin>=0.21.0",
+    "sqlalchemy>=2.0.41",
+    "testcontainers>=4.10.0",
+    "testcontainers-postgres>=0.0.1rc1",
+    "types-python-dateutil>=2.9.0.20250708",
+    "types-requests>=2.32.4.20250611",
+]
+
+[dependency-groups]
+code-quality = [
+    "pre-commit>=4.2.0",
+    "ruff>=0.12.4",
+    "ty>=0.0.1a15",
+]
+dev = [
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-cov>=6.2.1",
+]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "session"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = [
+    "I",     # isort
+    "F",     # pyflakes
+    "FAST",  # FastApi
+    "ANN",   # flake8-annotations
+    "ASYNC", # flake8-async
+    "COM",   # flake8-commas
+    "T10",   # flake8-debugger
+    "PT",    # flake8-pytest-style
+    "RET",   # flake8-return
+    "SIM",   # flake8-simplify
+    "N",     # pep8-naming
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+]
+ignore = [
+    "ANN002", # missing-type-args
+    "ANN003", # missing-type-kwargs
+    "ANN204", # missing-return-type-special-method
+    "ANN401", # any-type
+]
+
+[build-system]
+requires = ["uv_build"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = "app"
